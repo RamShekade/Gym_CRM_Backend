@@ -27,24 +27,22 @@ router.post("/", async (req, res) => {
             return res.status(400).json({ error: "All fields are required." });
         }
 
-        // Define prices based on membership type
-        const membershipPrices = {
-            Basic: 999,
-            Premium: 1999,
-            VIP: 2999,
+        // Define membership plans with prices and durations in months
+        const membershipPlans = {
+            Monthly: { price: 999, months: 1 },
+            Quarterly: { price: 2499, months: 3 },
+            Yearly: { price: 8999, months: 12 }
         };
 
-        // Validate membership type
-        if (!membershipPrices[membershipType]) {
+        const plan = membershipPlans[membershipType];
+
+        if (!plan) {
             return res.status(400).json({ error: "Invalid membership type." });
         }
 
-        const gymId = await getNextGymId(); // Get next Gym ID
-        const price = membershipPrices[membershipType]; // Get price based on category
-
-        // Set expiry date to one month from today
+        const gymId = await getNextGymId();
         const expiryDate = new Date();
-        expiryDate.setMonth(expiryDate.getMonth() + 1);
+        expiryDate.setMonth(expiryDate.getMonth() + plan.months);
 
         const newMember = new Member({
             name,
@@ -54,12 +52,12 @@ router.post("/", async (req, res) => {
             membershipType,
             expiryDate,
             gymId,
-            price, // Store the price
+            price: plan.price
         });
 
         await newMember.save();
 
-        res.status(201).json({ message: "Member added successfully!", gymId: newMember.gymId, price });
+        res.status(201).json({ message: "Member added successfully!", gymId, price: plan.price });
     } catch (error) {
         console.error("Error Adding Member:", error);
         res.status(500).json({ error: "Server error. Check logs." });

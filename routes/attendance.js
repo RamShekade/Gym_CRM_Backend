@@ -14,24 +14,49 @@ router.get('/', async (req, res) => {
 });
 
 // Place this above `/:gymId`
-router.get('/today', async (req, res) => {
+router.get('/search', async (req, res) => {
     try {
-        const today = new Date();
-        today.setHours(0, 0, 0, 0); // Start of today
-        const tomorrow = new Date(today);
-        tomorrow.setDate(today.getDate() + 1); // Start of next day
+        const { date } = req.query;
+
+        let targetDate;
+        if (date) {
+            // Parse date from query string
+            targetDate = new Date(date);
+            if (isNaN(targetDate)) {
+                return res.status(400).json({ message: 'Invalid date format. Use YYYY-MM-DD.' });
+            }
+        } else {
+            // Default to today
+            targetDate = new Date();
+        }
+
+        // Set time to start of the day
+        targetDate.setHours(0, 0, 0, 0);
+        const nextDay = new Date(targetDate);
+        nextDay.setDate(targetDate.getDate() + 1);
 
         const records = await Attendance.find(
-            { checkIn: { $gte: today, $lt: tomorrow } },
-            { checkIn: 1, checkOut: 1, gymId: 1, _id: 0 } // Fetch gymId, checkIn, checkOut only
+            {
+                checkIn: {
+                    $gte: targetDate,
+                    $lt: nextDay
+                }
+            },
+            {
+                gymId: 1,
+                checkIn: 1,
+                checkOut: 1,
+                _id: 0
+            }
         );
 
         res.json(records);
     } catch (error) {
-        console.error("🔥 Error fetching today's attendance:", error);
+        console.error("🔥 Error fetching attendance:", error);
         res.status(500).json({ message: error.message });
     }
 });
+
 
 // Now define the dynamic route AFTER
 router.get('/:gymId', async (req, res) => {
